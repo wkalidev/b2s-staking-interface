@@ -1,199 +1,189 @@
 # B2S Staking Interface
 
-React interface for staking $B2S tokens with real-time APY calculations.
-
+[![Mainnet](https://img.shields.io/badge/Network-Stacks%20Mainnet-green)](https://explorer.hiro.so/?chain=mainnet)
 [![React](https://img.shields.io/badge/React-18-blue)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
 [![Stacks](https://img.shields.io/badge/Stacks-Blockchain-purple)](https://stacks.co/)
+[![Builder Rewards](https://img.shields.io/badge/Stacks-Builder%20Rewards%20March%202026-orange)](https://stacks.org)
+
+React interface for staking $B2S tokens with real-time APY calculations — connected to Stacks mainnet.
+
+**[https://base2stacks-tracker.vercel.app](https://base2stacks-tracker.vercel.app)**
+
+---
 
 ## 📋 Overview
 
-Standalone React component library for integrating B2S token staking into any Web3 application.
+Standalone React component library for integrating B2S token staking into any Web3 application. Pulls live data from the Hiro Mainnet API and interacts with `b2s-staking-vault-v2` on Stacks mainnet.
+
+---
 
 ## ✨ Features
 
-- 🔒 **Secure Staking** - Lock tokens to earn rewards
-- 📊 **Real-time APY** - Live yield calculations
-- 💰 **Flexible Terms** - Choose your lock period
-- 📈 **Rewards Dashboard** - Track earnings over time
-- ⚡ **Fast Unstaking** - Withdraw anytime
-- 🎨 **Customizable UI** - Fully themeable components
+- 🔒 **Secure Staking** — Lock tokens to earn rewards via `b2s-staking-vault-v2`
+- 📊 **Real-time APY** — Live yield calculations (12.5% APY)
+- 💰 **No Lock-up** — Unstake anytime without penalties
+- 📈 **Rewards Dashboard** — Track pending rewards in real time
+- ⚡ **Live Holders** — Fetches holder count from Hiro Mainnet API
+- 🎨 **Neon Punk UI** — Dark terminal aesthetic with Fira Code
+
+---
 
 ## 🚀 Quick Start
 
 ### Installation
 ```bash
-npm install @b2s/staking-interface
+npm install @wkalidev/b2s-staking-interface
 ```
 
 ### Basic Usage
 ```tsx
-import { StakingDashboard } from '@b2s/staking-interface';
+import { StakingDashboard } from '@wkalidev/b2s-staking-interface'
 
 function App() {
   return (
     <StakingDashboard
-      userAddress="ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM"
-      contractAddress="ST936YWJPST8GB8FFRCN7CC6P2YR5K6NNBAARQ96"
-      contractName="b2s-token"
+      userAddress="SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM"
+      contractAddress="SP936YWJPST8GB8FFRCN7CC6P2YR5K6NNBAARQ96"
+      contractName="b2s-staking-vault-v2"
+      onStakeSuccess={(amount) => console.log('Staked:', amount)}
+      onUnstakeSuccess={(amount) => console.log('Unstaked:', amount)}
     />
-  );
+  )
 }
 ```
 
+---
+
 ## 📦 Components
 
-### StakingDashboard
-
+### `StakingDashboard`
 Main component with all staking features.
 ```tsx
 <StakingDashboard
   userAddress={string}
-  contractAddress={string}
-  contractName={string}
-  theme?: 'light' | 'dark'
+  contractAddress={string}         // default: SP936Y...ARQ96
+  contractName={string}            // default: b2s-staking-vault-v2
   onStakeSuccess?: (amount: number) => void
   onUnstakeSuccess?: (amount: number) => void
 />
 ```
 
-### StakeInput
-
-Input component for staking amounts.
+### `StakingCard`
+Compact card variant — same features, smaller footprint.
 ```tsx
-<StakeInput
-  balance={number}
-  onStake={(amount) => console.log(amount)}
-  minAmount={1}
-  maxAmount={balance}
+<StakingCard
+  userAddress={string}
+  onStakeSuccess?: (amount: number) => void
+  onUnstakeSuccess?: (amount: number) => void
 />
 ```
 
-### RewardsDisplay
-
+### `RewardsDisplay`
 Shows current rewards and APY.
 ```tsx
-<RewardsDisplay
-  totalStaked={number}
-  rewards={number}
-  apy={number}
-/>
+<RewardsDisplay totalStaked={number} rewards={number} apy={number} />
 ```
 
-## 🎨 Theming
-```tsx
-import { ThemeProvider } from '@b2s/staking-interface';
-
-const customTheme = {
-  colors: {
-    primary: '#3b82f6',
-    secondary: '#06b6d4',
-    background: '#1e293b',
-    text: '#ffffff',
-  },
-  fonts: {
-    body: 'Inter, sans-serif',
-  },
-};
-
-<ThemeProvider theme={customTheme}>
-  <StakingDashboard />
-</ThemeProvider>
-```
+---
 
 ## 🔧 Configuration
 
-Create a `b2s.config.js`:
 ```javascript
+// b2s.config.js
 export default {
-  network: 'testnet',
+  network: 'mainnet',
   contracts: {
-    token: 'ST936YWJPST8GB8FFRCN7CC6P2YR5K6NNBAARQ96.b2s-token',
+    staking: 'SP936YWJPST8GB8FFRCN7CC6P2YR5K6NNBAARQ96.b2s-staking-vault-v2',
+    token:   'SP936YWJPST8GB8FFRCN7CC6P2YR5K6NNBAARQ96.b2s-token',
   },
   staking: {
     minAmount: 1,
     maxAmount: 1000000,
-    lockPeriods: [7, 30, 90, 180, 365], // days
+    apy: 12.5,
   },
-};
+}
 ```
 
+---
+
 ## 📊 APY Calculation
+
 ```typescript
-// Example: Calculate expected rewards
-import { calculateRewards } from '@b2s/staking-interface';
+import { calculateRewards } from '@wkalidev/b2s-staking-interface'
 
 const rewards = calculateRewards({
   principal: 1000,
   apy: 12.5,
   days: 365,
-});
-
-console.log(rewards); // 125 tokens
+})
+// → 125 $B2S
 ```
-
-## 🛠️ Development
-```bash
-# Install dependencies
-npm install
-
-# Start dev server
-npm run dev
-
-# Build for production
-npm run build
-
-# Run tests
-npm test
-```
-
-## 📖 API Reference
-
-### calculateRewards
-```typescript
-function calculateRewards(params: {
-  principal: number;
-  apy: number;
-  days: number;
-}): number;
-```
-
-### getStakedAmount
-```typescript
-function getStakedAmount(
-  userAddress: string,
-  contractAddress: string
-): Promise<number>;
-```
-
-### stakeTokens
-```typescript
-function stakeTokens(
-  amount: number,
-  lockPeriod: number
-): Promise<TransactionResult>;
-```
-
-## 🔗 Related Packages
-
-- [@b2s/token-contract](https://github.com/wkalidev/b2s-token-contract) - Smart contract
-- [@b2s/analytics](https://github.com/wkalidev/b2s-analytics-dashboard) - Analytics dashboard
-- [base2stacks-tracker](https://github.com/wkalidev/base2stacks-tracker) - Main app
-
-## 🤝 Contributing
-
-See [CONTRIBUTING.md](../base2stacks-tracker/CONTRIBUTING.md)
-
-## 📜 License
-
-MIT License - See [LICENSE](LICENSE)
-
-## 🔗 Links
-
-- [Live Demo](https://wkalidev-base2stacks-tracker.vercel.app)
-- [Documentation](https://github.com/wkalidev/b2s-staking-interface/wiki)
-- [NPM Package](https://npmjs.com/package/@b2s/staking-interface) (coming soon)
 
 ---
 
-**Built for #StacksBuilderRewards 🏆**
+## 📖 API Reference
+
+```typescript
+function calculateRewards(params: {
+  principal: number
+  apy: number
+  days: number
+}): number
+
+function getStakedAmount(
+  userAddress: string,
+  contractAddress: string
+): Promise<number>
+
+function stakeTokens(
+  amount: number
+): Promise<TransactionResult>
+```
+
+---
+
+## 🛠️ Development
+
+```bash
+npm install
+npm run dev
+npm run build
+npm test
+```
+
+---
+
+## 🔗 Smart Contracts (Mainnet)
+
+**Deployer**: `SP936YWJPST8GB8FFRCN7CC6P2YR5K6NNBAARQ96`
+
+| Contract | Role |
+|---|---|
+| `b2s-staking-vault-v2` | Staking vault — main contract |
+| `b2s-token` | $B2S token balance & supply |
+| `b2s-rewards-distributor-v3` | Rewards distribution |
+
+---
+
+## 🔗 Related Repos
+
+| Repo | Description |
+|---|---|
+| [base2stacks-tracker](https://github.com/wkalidev/base2stacks-tracker) | Main frontend — [live app](https://base2stacks-tracker.vercel.app) |
+| [b2s-token-contract](https://github.com/wkalidev/b2s-token-contract) | All Clarity smart contracts |
+| [b2s-analytics-dashboard](https://github.com/wkalidev/b2s-analytics-dashboard) | Analytics dashboard |
+
+---
+
+## 📜 License
+
+MIT — See [LICENSE](./LICENSE)
+
+## 👨‍💻 Author
+
+**wkalidev (zcodebase)** · [Twitter](https://twitter.com/willycodexwar) · [Farcaster](https://warpcast.com/willywarrior)
+
+---
+
+**Built for #StacksBuilderRewards March 2026 🏆**
