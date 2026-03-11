@@ -1,1 +1,477 @@
-<!DOCTYPE html><html><body>B2S Staking</body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>B2S Staking Interface — Stacks Mainnet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --neon-green: #00ff9f;
+      --neon-cyan: #00d4ff;
+      --neon-gold: #ffd700;
+      --neon-pink: #ff00ff;
+      --bg: #050a0e;
+      --card: rgba(5,15,20,0.97);
+      --border: rgba(0,255,159,0.2);
+      --text: #e2e8f0;
+      --muted: #64748b;
+    }
+
+    body {
+      font-family: 'Fira Code', 'Courier New', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,255,159,0.012) 2px, rgba(0,255,159,0.012) 4px
+      );
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .orb-1 { width: 500px; height: 500px; top: -150px; left: -150px; background: rgba(0,255,159,0.05); }
+    .orb-2 { width: 400px; height: 400px; bottom: -100px; right: -100px; background: rgba(0,212,255,0.05); }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    /* Top status bar */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 9px;
+      letter-spacing: 0.25em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .status-live {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--neon-green);
+    }
+
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--neon-green);
+      box-shadow: 0 0 8px var(--neon-green);
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+
+    /* Card */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      box-shadow:
+        0 0 0 1px rgba(0,255,159,0.05),
+        0 0 60px rgba(0,255,159,0.06),
+        inset 0 1px 0 rgba(0,255,159,0.08);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Corner brackets */
+    .corner { position: absolute; width: 10px; height: 10px; border-color: var(--neon-green); border-style: solid; opacity: 0.5; }
+    .corner.tl { top: 6px; left: 6px; border-width: 1px 0 0 1px; }
+    .corner.tr { top: 6px; right: 6px; border-width: 1px 1px 0 0; }
+    .corner.bl { bottom: 6px; left: 6px; border-width: 0 0 1px 1px; }
+    .corner.br { bottom: 6px; right: 6px; border-width: 0 1px 1px 0; }
+
+    /* Header */
+    .card-header {
+      padding: 24px 28px 20px;
+      border-bottom: 1px solid rgba(0,255,159,0.08);
+    }
+
+    .card-eyebrow {
+      font-size: 10px;
+      letter-spacing: 0.35em;
+      color: var(--neon-green);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .card-title {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: #f1f5f9;
+    }
+
+    /* Stats grid */
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1px;
+      background: rgba(0,255,159,0.08);
+    }
+
+    .stat {
+      background: var(--card);
+      padding: 16px 12px;
+      text-align: center;
+    }
+
+    .stat-label { font-size: 9px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+    .stat-value { font-size: 20px; font-weight: 700; }
+    .stat-value.green { color: var(--neon-green); text-shadow: 0 0 16px rgba(0,255,159,0.4); }
+    .stat-value.gold  { color: var(--neon-gold);  text-shadow: 0 0 16px rgba(255,215,0,0.4); }
+    .stat-value.cyan  { color: var(--neon-cyan);  text-shadow: 0 0 16px rgba(0,212,255,0.4); }
+
+    /* Body */
+    .card-body { padding: 24px 28px; }
+
+    /* Rewards row */
+    .rewards-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: rgba(255,215,0,0.04);
+      border: 1px solid rgba(255,215,0,0.15);
+      border-radius: 2px;
+      margin-bottom: 20px;
+    }
+
+    .rewards-label { font-size: 9px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+    .rewards-value { font-size: 18px; font-weight: 700; color: var(--neon-gold); text-shadow: 0 0 12px rgba(255,215,0,0.4); }
+
+    .btn-claim {
+      padding: 9px 16px;
+      font-family: 'Fira Code', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      background: rgba(255,215,0,0.1);
+      border: 1px solid rgba(255,215,0,0.3);
+      color: var(--neon-gold);
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-claim:hover { background: rgba(255,215,0,0.2); box-shadow: 0 0 20px rgba(255,215,0,0.2); }
+
+    .divider { height: 1px; background: rgba(0,255,159,0.08); margin: 0 0 20px; }
+
+    /* Tabs */
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      background: rgba(0,255,159,0.04);
+      border: 1px solid rgba(0,255,159,0.1);
+      border-radius: 2px;
+      padding: 4px;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      padding: 10px;
+      font-family: 'Fira Code', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 1px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .tab.active { background: rgba(0,255,159,0.12); color: var(--neon-green); box-shadow: 0 0 12px rgba(0,255,159,0.08); }
+
+    /* Input */
+    .input-label { display: block; font-size: 9px; letter-spacing: 0.25em; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
+
+    .input-wrap { position: relative; margin-bottom: 16px; }
+
+    .input {
+      width: 100%;
+      padding: 14px 60px 14px 16px;
+      font-family: 'Fira Code', monospace;
+      font-size: 16px;
+      font-weight: 600;
+      background: rgba(0,255,159,0.03);
+      border: 1px solid rgba(0,255,159,0.2);
+      border-radius: 2px;
+      color: #f1f5f9;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .input:focus {
+      border-color: rgba(0,255,159,0.45);
+      box-shadow: 0 0 0 3px rgba(0,255,159,0.05);
+    }
+
+    .input::placeholder { color: #1e3a2f; }
+
+    .input-badge {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: var(--neon-green);
+      opacity: 0.6;
+    }
+
+    /* Projection */
+    .projection {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 14px;
+      background: rgba(0,212,255,0.04);
+      border: 1px solid rgba(0,212,255,0.12);
+      border-radius: 2px;
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+
+    .proj-label { color: var(--muted); }
+    .proj-value { color: var(--neon-cyan); font-weight: 700; }
+
+    /* Buttons */
+    .btn {
+      width: 100%;
+      padding: 15px;
+      font-family: 'Fira Code', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-stake {
+      background: linear-gradient(135deg, rgba(0,255,159,0.14), rgba(0,255,159,0.07));
+      border: 1px solid rgba(0,255,159,0.35);
+      color: var(--neon-green);
+      box-shadow: 0 0 20px rgba(0,255,159,0.08);
+    }
+
+    .btn-stake:hover { background: linear-gradient(135deg, rgba(0,255,159,0.22), rgba(0,255,159,0.1)); box-shadow: 0 0 30px rgba(0,255,159,0.18); transform: translateY(-1px); }
+
+    .btn-unstake {
+      background: rgba(0,212,255,0.06);
+      border: 1px solid rgba(0,212,255,0.2);
+      color: var(--neon-cyan);
+    }
+
+    .btn-unstake:hover { background: rgba(0,212,255,0.12); box-shadow: 0 0 20px rgba(0,212,255,0.12); transform: translateY(-1px); }
+
+    .btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none !important; }
+
+    /* Footer */
+    .card-footer {
+      padding: 12px 28px;
+      border-top: 1px solid rgba(0,255,159,0.06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-text { font-size: 9px; letter-spacing: 0.15em; color: #1e3a2f; text-transform: uppercase; }
+
+    /* Hidden */
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="container">
+  <div class="status-bar">
+    <span>SP936Y...ARQ96</span>
+    <div class="status-live"><div class="dot"></div>STACKS MAINNET</div>
+  </div>
+
+  <div class="card">
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+
+    <div class="card-header">
+      <div class="card-eyebrow">B2S // Staking Interface</div>
+      <div class="card-title">Stake $B2S · Earn Rewards</div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Staked</div>
+        <div class="stat-value green" id="staked-bal">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">APY</div>
+        <div class="stat-value gold">12.5%</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Holders</div>
+        <div class="stat-value cyan" id="holders">—</div>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <!-- Rewards -->
+      <div class="rewards-box">
+        <div>
+          <div class="rewards-label">Pending Rewards</div>
+          <div class="rewards-value" id="pending-rewards">0.0000 $B2S</div>
+        </div>
+        <button class="btn-claim" onclick="claimRewards()">CLAIM</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" id="tab-stake" onclick="switchTab('stake')">▲ Stake</button>
+        <button class="tab" id="tab-unstake" onclick="switchTab('unstake')">▼ Unstake</button>
+      </div>
+
+      <!-- Input -->
+      <label class="input-label" id="action-label">Amount to stake</label>
+      <div class="input-wrap">
+        <input class="input" type="number" id="amount-input" placeholder="0.00" min="0" step="0.01" oninput="updateProjection()" />
+        <span class="input-badge">$B2S</span>
+      </div>
+
+      <!-- Projection -->
+      <div class="projection hidden" id="projection">
+        <span class="proj-label">Projected yearly rewards</span>
+        <span class="proj-value" id="proj-value">+0 $B2S</span>
+      </div>
+
+      <!-- CTA button -->
+      <button class="btn btn-stake" id="action-btn" onclick="handleAction()">▲ STAKE TOKENS</button>
+    </div>
+
+    <div class="card-footer">
+      <span class="footer-text">b2s-staking-vault-v2 · Stacks Mainnet</span>
+      <span class="footer-text" id="last-update"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+  const HIRO = 'https://api.mainnet.hiro.so';
+  const CONTRACT = 'SP936YWJPST8GB8FFRCN7CC6P2YR5K6NNBAARQ96';
+  const TOKEN = `${CONTRACT}.b2s-token`;
+
+  let currentTab = 'stake';
+  let stakedBalance = 0;
+
+  async function loadData() {
+    try {
+      const res = await fetch(`${HIRO}/extended/v1/tokens/ft/${TOKEN}/holders?limit=1`);
+      const data = await res.json();
+      document.getElementById('holders').textContent = (data.total || 0).toLocaleString();
+      document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+    } catch (e) { console.error(e); }
+  }
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('tab-stake').classList.toggle('active', tab === 'stake');
+    document.getElementById('tab-unstake').classList.toggle('active', tab === 'unstake');
+    document.getElementById('action-label').textContent = tab === 'stake' ? 'Amount to stake' : 'Amount to unstake';
+    const btn = document.getElementById('action-btn');
+    btn.className = `btn ${tab === 'stake' ? 'btn-stake' : 'btn-unstake'}`;
+    btn.textContent = tab === 'stake' ? '▲ STAKE TOKENS' : '▼ UNSTAKE TOKENS';
+    updateProjection();
+  }
+
+  function updateProjection() {
+    const amount = parseFloat(document.getElementById('amount-input').value) || 0;
+    const proj = document.getElementById('projection');
+    if (amount > 0 && currentTab === 'stake') {
+      const yearly = (amount * 0.125).toFixed(2);
+      document.getElementById('proj-value').textContent = `+${yearly} $B2S`;
+      proj.classList.remove('hidden');
+    } else {
+      proj.classList.add('hidden');
+    }
+  }
+
+  function handleAction() {
+    const amount = parseFloat(document.getElementById('amount-input').value);
+    if (!amount || amount <= 0) return;
+    const btn = document.getElementById('action-btn');
+    btn.disabled = true;
+    btn.textContent = 'PROCESSING...';
+    setTimeout(() => {
+      if (currentTab === 'stake') {
+        stakedBalance += amount;
+        document.getElementById('staked-bal').textContent = stakedBalance.toFixed(0);
+      } else {
+        stakedBalance = Math.max(0, stakedBalance - amount);
+        document.getElementById('staked-bal').textContent = stakedBalance.toFixed(0);
+      }
+      document.getElementById('amount-input').value = '';
+      updateProjection();
+      btn.disabled = false;
+      btn.textContent = currentTab === 'stake' ? '▲ STAKE TOKENS' : '▼ UNSTAKE TOKENS';
+    }, 1200);
+  }
+
+  function claimRewards() {
+    document.getElementById('pending-rewards').textContent = '0.0000 $B2S';
+  }
+
+  loadData();
+  setInterval(loadData, 30000);
+</script>
+</body>
+</html>
