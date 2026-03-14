@@ -29,21 +29,34 @@ export const StakingDashboard: React.FC<StakingDashboardProps> = ({
   const [vaultTxns, setVaultTxns] = useState(0);
   const [lastUpdate, setLastUpdate] = useState('');
   const [tab, setTab] = useState<'stake' | 'unstake'>('stake');
+  const [walletBalance, setWalletBalance] = useState(0);
 
   const fetchStakingData = useCallback(async () => {
     try {
-      const [holderRes, vaultRes] = await Promise.all([
+      const [holderRes, vaultRes, balanceRes] = await Promise.all([
         fetch(`${HIRO_API}/extended/v1/tokens/ft/${TOKEN_CONTRACT}/holders?limit=1`),
         fetch(`${HIRO_API}/extended/v1/address/${VAULT_CONTRACT}/transactions?limit=1`),
+        fetch(`${HIRO_API}/extended/v1/address/${userAddress}/balances`)
       ]);
-      const [holderData, vaultData] = await Promise.all([holderRes.json(), vaultRes.json()]);
+      const [holderData, vaultData, balanceData] = await Promise.all([
+        holderRes.json(),
+        vaultRes.json(),
+        balanceRes.json()
+      ]); 
+
       setHolders(holderData.total || 0);
       setVaultTxns(vaultData.total || 0);
+
+      const tokenBalance =
+        balanceData.fungible_tokens?.[TOKEN_CONTRACT]?.balance || 0;
+
+      setWalletBalance(parseFloat(tokenBalance) / 1_000_000);
+
       setLastUpdate(new Date().toLocaleTimeString());
     } catch (err) {
       console.error('fetchStakingData:', err);
     }
-  }, []);
+  }, [userAddress]);
 
   useEffect(() => {
     fetchStakingData();
@@ -205,7 +218,7 @@ export const StakingDashboard: React.FC<StakingDashboardProps> = ({
         /* Stats row */
         .sd-stats {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
+          grid-template-columns: repeat(5, 1fr);
           gap: 1px;
           background: rgba(0,255,159,0.08);
         }
@@ -443,6 +456,12 @@ export const StakingDashboard: React.FC<StakingDashboardProps> = ({
                 <div className="sd-stat-value p">{rewards.toFixed(4)}</div>
               </div>
               <div className="sd-stat">
+                <div className="sd-stat-label">Wallet</div>
+                <div className="sd-stat-value w">
+                  {walletBalance > 0 ? walletBalance.toFixed(2) : '0'}
+                </div>
+              </div>
+              <div className="sd-stat">
                 <div className="sd-stat-label">Holders</div>
                 <div className="sd-stat-value c">{holders > 0 ? holders.toLocaleString() : '—'}</div>
               </div>
@@ -505,7 +524,7 @@ export const StakingDashboard: React.FC<StakingDashboardProps> = ({
                 <button
                   className="sd-btn sd-btn-stake"
                   onClick={handleStake}
-                  disabled={loading || !stakeAmount || parseFloat(stakeAmount) <= 0}
+                  disabled={loading || !stakeAmount || parseFloat(stakeAmount) <= 0 || parseFloat(stakeAmount) > walletBalance}
                 >
                   {loading ? <><span className="sd-spinner" />PROCESSING...</> : '▲ STAKE TOKENS'}
                 </button>
