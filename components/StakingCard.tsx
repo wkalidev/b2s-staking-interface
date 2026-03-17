@@ -17,6 +17,9 @@ interface StakingData {
   apy: number;
   totalStaked: number;
   loading: boolean;
+  lockPeriod?: number;  
+  lockStartTime?: number;  
+  currentBlock?: number;  
 }
 
 export const StakingCard: React.FC<StakingCardProps> = ({
