@@ -4,6 +4,7 @@ const HIRO_API = 'https://api.mainnet.hiro.so';
 const CONTRACT_ADDRESS = 'SP936YWJPST8GB8FFRCN7CC6P2YR5K6NNBAARQ96';
 const VAULT_CONTRACT = `${CONTRACT_ADDRESS}.b2s-staking-vault-v2`;
 const TOKEN_CONTRACT = `${CONTRACT_ADDRESS}.b2s-token`;
+const BLOCK_TIME_SECONDS = 600; // 10 minutes  
 
 interface StakingDashboardProps {
   userAddress: string;
@@ -30,36 +31,88 @@ export const StakingDashboard: React.FC<StakingDashboardProps> = ({
   const [lastUpdate, setLastUpdate] = useState('');
   const [tab, setTab] = useState<'stake' | 'unstake'>('stake');
   const [walletBalance, setWalletBalance] = useState(0);
+  const [lockPeriod, setLockPeriod] = useState<number>(0); // in blocks  
+  const [lockStartTime, setLockStartTime] = useState<number>(0); // block height  
+  const [currentBlock, setCurrentBlock] = useState<number>(0);
+  const [notificationPermission, setNotificationPermission] = useState<boolean>(false);
 
   const fetchStakingData = useCallback(async () => {
     try {
-      const [holderRes, vaultRes, balanceRes] = await Promise.all([
+      const [holderRes, vaultRes, balanceRes, blockRes] = await Promise.all([
         fetch(`${HIRO_API}/extended/v1/tokens/ft/${TOKEN_CONTRACT}/holders?limit=1`),
         fetch(`${HIRO_API}/extended/v1/address/${VAULT_CONTRACT}/transactions?limit=1`),
-        fetch(`${HIRO_API}/extended/v1/address/${userAddress}/balances`)
+        fetch(`${HIRO_API}/extended/v1/address/${userAddress}/balances`),
+        fetch(`${HIRO_API}/extended/v1/blocks?limit=1`)
       ]);
-      const [holderData, vaultData, balanceData] = await Promise.all([
+      
+      const [holderData, vaultData, balanceData, blockData] = await Promise.all([
         holderRes.json(),
         vaultRes.json(),
-        balanceRes.json()
+        balanceRes.json(),
+        blockRes.json()
       ]); 
 
       setHolders(holderData.total || 0);
       setVaultTxns(vaultData.total || 0);
+      setCurrentBlock(blockData.results[0].height);
 
       const tokenBalance =
         balanceData.fungible_tokens?.[TOKEN_CONTRACT]?.balance || 0;
 
       setWalletBalance(parseFloat(tokenBalance) / 1_000_000);
 
+      // Fetch lock info if user has staked balance
+      if (stakedBalance > 0) {
+        try {
+          const lockInfoRes = await fetch(
+            `${HIRO_API}/v2/contracts/call-read/${VAULT_CONTRACT}/get-lock-info`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sender: userAddress, arguments: [] }),
+            }
+          );
+          const lockData = await lockInfoRes.json();
+          setLockPeriod(lockData.lock_period || 0);
+          setLockStartTime(lockData.lock_start || 0);
+        } catch (lockErr) {
+          console.error('Error fetching lock info:', lockErr);
+        }
+      }
+
       setLastUpdate(new Date().toLocaleTimeString());
     } catch (err) {
       console.error('fetchStakingData:', err);
     }
-  }, [userAddress]);
+  }, [userAddress, stakedBalance]);
+
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window) {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission === 'granted');
+      return permission === 'granted';
+    }
+    return false;
+  };
+
+  const scheduleUnlockNotification = (unlockTime: number) => {
+    if (!notificationPermission) return;
+    
+    const timeUntilUnlock = unlockTime - Date.now();
+    if (timeUntilUnlock > 0) {
+      setTimeout(() => {
+        new Notification('B2S Vault Ready to Unstake', {
+          body: 'Your vault is now ready to unstake!',
+          icon: '/icon-192x192.png'
+        });
+      }, timeUntilUnlock);
+    }
+  };
 
   useEffect(() => {
     fetchStakingData();
+    requestNotificationPermission();
+    
     const interval = setInterval(fetchStakingData, 30000);
     return () => clearInterval(interval);
   }, [fetchStakingData]);
@@ -93,9 +146,93 @@ export const StakingDashboard: React.FC<StakingDashboardProps> = ({
     }
   };
 
+  const blocksToTime = (blocks: number): { days: number; hours: number; minutes: number } => {  
+    const totalSeconds = blocks * BLOCK_TIME_SECONDS;  
+    const days = Math.floor(totalSeconds / 86400);  
+    const hours = Math.floor((totalSeconds % 86400) / 3600);  
+    const minutes = Math.floor((totalSeconds % 3600) / 60);  
+    return { days, hours, minutes };  
+  };
+
   const calculateProjectedRewards = () => {
     const amount = parseFloat(stakeAmount) || 0;
     return (amount * (apy / 100)).toFixed(2);
+  };
+
+  const getRemainingBlocks = (): number => {
+    if (!lockPeriod || !lockStartTime || !currentBlock) return 0;
+    const elapsed = currentBlock - lockStartTime;
+    return Math.max(0, lockPeriod - elapsed);
+  };
+
+  const getElapsedBlocks = (): number => {
+    if (!lockPeriod || !lockStartTime || !currentBlock) return 0;
+    return Math.min(currentBlock - lockStartTime, lockPeriod);
+  };
+
+  const getStatusColor = (): string => {
+    const remainingBlocks = getRemainingBlocks();
+    if (remainingBlocks <= 0) return '#00ff9f'; // green - unlockable
+    if (remainingBlocks < lockPeriod * 0.25) return '#ffd700'; // yellow - < 25% remaining
+    return '#ff3333'; // red - locked
+  };
+
+  const getStatusText = (): string => {
+    const remainingBlocks = getRemainingBlocks();
+    if (remainingBlocks <= 0) return 'UNLOCKABLE';
+    if (remainingBlocks < lockPeriod * 0.25) return 'NEARLY UNLOCKABLE';
+    return 'LOCKED';
+  };
+
+  const formatTimeRemaining = (): string => {
+    const remainingBlocks = getRemainingBlocks();
+    if (remainingBlocks <= 0) return 'Ready to unstake';
+    
+    const { days, hours, minutes } = blocksToTime(remainingBlocks);
+    const parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    return parts.join(' ') || '< 1m';
+  };
+
+  const calculateUnlockDate = (): string => {
+    if (!lockPeriod || !lockStartTime || !currentBlock) return 'N/A';
+    const remainingBlocks = getRemainingBlocks();
+    const remainingSeconds = remainingBlocks * BLOCK_TIME_SECONDS;
+    const unlockDate = new Date(Date.now() + remainingSeconds * 1000);
+    return unlockDate.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const LockProgressBar = () => {
+    if (!lockPeriod || !lockStartTime) return null;
+    
+    const elapsed = getElapsedBlocks();
+    const total = lockPeriod;
+    const percentage = (elapsed / total) * 100;
+    
+    return (
+      <div className="lock-progress">
+        <div className="progress-bar-container">
+          <div 
+            className="progress-fill" 
+            style={{ 
+              width: `${percentage}%`,
+              backgroundColor: getStatusColor()
+            }} 
+          />
+        </div>
+        <div className="progress-stats">
+          <span className="progress-text">{percentage.toFixed(1)}% elapsed</span>
+          <span className="progress-text">{formatTimeRemaining()} remaining</span>
+        </div>
+      </div>
+    );
   };
 
   const claimRewards = () => setRewards(0);
@@ -230,6 +367,72 @@ export const StakingDashboard: React.FC<StakingDashboardProps> = ({
         .sd-stat-value.c { color: #00d4ff; text-shadow: 0 0 12px rgba(0,212,255,.4); }
         .sd-stat-value.p { color: #ff00ff; text-shadow: 0 0 12px rgba(255,0,255,.4); }
         .sd-stat-value.w { color: #e2e8f0; }
+
+        /* Lock Status */
+        .sd-lock-status {
+          background: rgba(0,212,255,0.04);
+          border: 1px solid rgba(0,212,255,0.12);
+          border-radius: 2px;
+          padding: 16px;
+          margin: 0 28px 20px;
+        }
+
+        .sd-lock-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 12px;
+          font-size: 11px;
+          letter-spacing: .2em;
+          text-transform: uppercase;
+        }
+
+        .sd-lock-status-badge {
+          padding: 4px 8px;
+          border-radius: 2px;
+          font-size: 9px;
+          font-weight: 700;
+          background: rgba(0,0,0,0.3);
+          border: 1px solid currentColor;
+        }
+
+        .sd-lock-timer {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          margin-top: 12px;
+          font-size: 12px;
+          color: #94a3b8;
+        }
+
+        .sd-lock-timer span:first-child {
+          color: #00d4ff;
+          font-weight: 600;
+        }
+
+        .progress-bar-container {
+          width: 100%;
+          height: 8px;
+          background: rgba(0,255,159,0.1);
+          border-radius: 4px;
+          overflow: hidden;
+          margin: 12px 0;
+          position: relative;
+        }
+
+        .progress-fill {
+          height: 100%;
+          transition: width 0.3s ease, background-color 0.3s ease;
+          box-shadow: 0 0 10px currentColor;
+        }
+
+        .progress-stats {
+          display: flex;
+          justify-content: space-between;
+          font-size: 10px;
+          color: #64748b;
+          letter-spacing: .05em;
+        }
 
         /* Body */
         .sd-body { padding: 24px 28px; }
@@ -471,6 +674,24 @@ export const StakingDashboard: React.FC<StakingDashboardProps> = ({
               </div>
             </div>
 
+            {/* Lock Status */}
+            {stakedBalance > 0 && lockPeriod > 0 && (
+              <div className="sd-lock-status">
+                <div className="sd-lock-header">
+                  <span>LOCK STATUS</span>
+                  <span className="sd-lock-status-badge" style={{ borderColor: getStatusColor(), color: getStatusColor() }}>
+                    {getStatusText()}
+                  </span>
+                </div>
+                <LockProgressBar />
+                <div className="sd-lock-timer">
+                  <span>⏳ {formatTimeRemaining()}</span>
+                  <span>📅 Unlock: {calculateUnlockDate()}</span>
+                  <span>🔒 Lock Period: {blocksToTime(lockPeriod).days}d</span>
+                </div>
+              </div>
+            )}
+
             {/* Body */}
             <div className="sd-body">
 
@@ -532,7 +753,7 @@ export const StakingDashboard: React.FC<StakingDashboardProps> = ({
                 <button
                   className="sd-btn sd-btn-unstake"
                   onClick={handleUnstake}
-                  disabled={loading || stakedBalance === 0}
+                  disabled={loading || stakedBalance === 0 || (lockPeriod > 0 && getRemainingBlocks() > 0)}
                 >
                   {loading ? <><span className="sd-spinner" />PROCESSING...</> : '▼ UNSTAKE ALL'}
                 </button>
@@ -540,7 +761,10 @@ export const StakingDashboard: React.FC<StakingDashboardProps> = ({
 
               {/* Note */}
               <div className="sd-note">
-                ℹ️ Staked tokens earn continuous rewards at {apy}% APY. Unstake at any time — no penalties.
+                ℹ️ Staked tokens earn continuous rewards at {apy}% APY. 
+                {lockPeriod > 0 && getRemainingBlocks() > 0 
+                  ? ' Tokens are locked until the lock period ends.' 
+                  : ' Unstake at any time — no penalties.'}
               </div>
             </div>
 
