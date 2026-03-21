@@ -187,4 +187,4 @@ MIT — See [LICENSE](./LICENSE)
 
 ---
 
-**Built for #StacksBuilderRewards March 2026 🏆**
+**Built for #StacksBuilderRewards March 2026 🏆**\n## Staking Tiers\n- 1x base\n- 1.5x (525 blocks)\n- 2x (1050 blocks)\n- 3x (2100 blocks)
