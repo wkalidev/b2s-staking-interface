@@ -1,0 +1,9 @@
+export const DEPLOYER = 'SP936YWJPST8GB8FFRCN7CC6P2YR5K6NNBAARQ96'
+export const STAKING_CONTRACT = `${DEPLOYER}.b2s-staking-vault-v2`
+export const TOKEN_CONTRACT = `${DEPLOYER}.b2s-token-v4`
+export const HIRO_API = 'https://api.mainnet.hiro.so'
+export const MICRO_UNITS = 1_000_000
+export const BLOCK_TIME_SECONDS = 600
+export const BLOCKS_PER_YEAR = 52_560
+export const BASE_APY = 12.5
+export const CLAIM_COOLDOWN_BLOCKS = 144
