@@ -1,4 +1,4 @@
-export const DEPLOYER = 'SP936YWJPST8GB8FFRCN7CC6P2YR5K6NNBAARQ96'
+﻿export const DEPLOYER = 'SP1V72500C63KN9E348QDK9X879MASSTN0J3KBQ5N'
 export const STAKING_CONTRACT = `${DEPLOYER}.b2s-staking-vault-v2`
 export const TOKEN_CONTRACT = `${DEPLOYER}.b2s-token-v4`
 export const HIRO_API = 'https://api.mainnet.hiro.so'

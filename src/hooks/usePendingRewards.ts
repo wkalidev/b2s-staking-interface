@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { callReadOnlyFunction, cvToJSON, standardPrincipalCV } from '@stacks/transactions'
 import { StacksMainnet } from '@stacks/network'
 
 const network  = new StacksMainnet()
-const CONTRACT = 'SP936YWJPST8GB8FFRCN7CC6P2YR5K6NNBAARQ96'
+const CONTRACT = 'SP1V72500C63KN9E348QDK9X879MASSTN0J3KBQ5N'
 
 export function usePendingRewards(address: string) {
   const [rewards, setRewards] = useState(0)

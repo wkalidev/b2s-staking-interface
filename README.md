@@ -39,19 +39,13 @@ function App() {
 | ~7 days | 1050+ | 25% |
 | ~14 days | 2100+ | 37.5% |
 
-## Hooks disponibles
+## Available Hooks
 
 ```typescript
 import {
-  useStaking,
-  useVault,
+  useStakePosition,
+  useCurrentBlock,
   usePendingRewards,
-  useAPYHistory,
-  useMultiplier,
-  useUnlockBlock,
-  useStakingHistory,
-  useClaimRewards,
-  useCompound,
 } from '@wkalidev/b2s-staking'
 ```
 
@@ -61,11 +55,27 @@ import {
 npm install && npm run dev
 ```
 
-## Related
+## Smart Contracts (Mainnet)
 
-- [base2stacks-tracker](https://base2stacks-tracker.vercel.app) — live DeFi platform
-- [@wkalidev/b2s-contracts](https://www.npmjs.com/package/@wkalidev/b2s-contracts) — contract SDK
+**Deployer:** `SP1V72500C63KN9E348QDK9X879MASSTN0J3KBQ5N`
+
+| Contract | Description |
+|----------|-------------|
+| `b2s-staking-vault-v2` | Staking vault, 12.5%–37.5% APY, lock multipliers |
+| `b2s-staking-vault-v3` | Latest staking vault |
+| `b2s-token-v4` | SIP-010 $B2S token |
+| `b2s-rewards-distributor` | Daily reward distribution |
+
+## Related Repos
+
+| Repo | Description |
+|------|-------------|
+| [base2stacks-tracker](https://github.com/wkalidev/base2stacks-tracker) | Main DeFi platform — [live app](https://base2stacks-tracker.vercel.app) |
+| [b2s-token-contract](https://github.com/wkalidev/b2s-token-contract) | SDK & Clarity contracts — [@wkalidev/b2s-contracts](https://www.npmjs.com/package/@wkalidev/b2s-contracts) |
+| [b2s-analytics-dashboard](https://github.com/wkalidev/b2s-analytics-dashboard) | Analytics dashboard components |
+| [b2s-nft-badges](https://github.com/wkalidev/b2s-nft-badges) | 567 NFT badge assets and hooks |
+| [stacks-clarity-toolkit](https://github.com/wkalidev/stacks-clarity-toolkit) | Clarity dev toolkit — [@wkalidev/stacks-clarity-toolkit](https://www.npmjs.com/package/@wkalidev/stacks-clarity-toolkit) |
 
 ## License
 
-MIT — Built for #StacksBuilderRewards May 2026 🏆
+MIT — Built for #StacksBuilderRewards May 2026

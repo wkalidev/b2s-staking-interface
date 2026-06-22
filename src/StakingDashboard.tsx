@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 
 const HIRO_API = 'https://api.mainnet.hiro.so';
-const CONTRACT_ADDRESS = 'SP936YWJPST8GB8FFRCN7CC6P2YR5K6NNBAARQ96';
+const CONTRACT_ADDRESS = 'SP1V72500C63KN9E348QDK9X879MASSTN0J3KBQ5N';
 const VAULT_CONTRACT = `${CONTRACT_ADDRESS}.b2s-staking-vault-v2`;
 const TOKEN_CONTRACT = `${CONTRACT_ADDRESS}.b2s-token`;
 const BLOCK_TIME_SECONDS = 600; // 10 minutes  
